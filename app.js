@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
+// 1. CONFIGURACIÓN DE FIREBASE
 const firebaseConfig = {
     apiKey: "AIzaSyCDrXohcOJZcsMgqmvXakk4SJnaj7hgzDo",
     authDomain: "veriphoto-2c95d.firebaseapp.com",
@@ -14,34 +15,55 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let selectedFile;
+let coordsActuales = null;
 const statusTxt = document.getElementById("status");
 
-// --- 1. CAPA DE SEGURIDAD: BLOQUEO DE ESCRITORIO ---
+// --- 2. BLOQUEO DE ESCRITORIO (Solo Celulares) ---
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (!isMobile) {
-    document.body.innerHTML = "<h1>🚫 ACCESO DENEGADO</h1><p>Esta PWA solo funciona en dispositivos móviles para garantizar la integridad del GPS y la Cámara.</p>";
-    throw new Error("Aplicación bloqueada en PC");
+    document.body.innerHTML = "<h1>🚫 ACCESO DENEGADO</h1><p>VeriPhoto solo funciona en dispositivos móviles para garantizar la integridad del GPS.</p>";
+    throw new Error("PWA bloqueada en PC");
 }
 
-// --- 2. CAPA DE SEGURIDAD: VALIDACIÓN DE CAPTURA EN VIVO ---
+// --- 3. ACTIVACIÓN ANTICIPADA DEL GPS ---
+// Esto hace que el celular pida permiso apenas abras la app
+function activarGPS() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                coordsActuales = pos.coords;
+                statusTxt.innerText = `GPS Conectado (Precisión: ${Math.round(pos.coords.accuracy)}m) ✅`;
+                statusTxt.style.color = "green";
+            },
+            (err) => {
+                statusTxt.innerText = "⚠️ Error: Activa la ubicación en tu celular.";
+                statusTxt.style.color = "red";
+            },
+            { enableHighAccuracy: true }
+        );
+    }
+}
+activarGPS();
+
+// --- 4. VALIDACIÓN DE CAPTURA (CÁMARA EN VIVO) ---
 document.getElementById("cameraInput").addEventListener("change", (e) => {
     const file = e.target.files[0];
     const ahora = Date.now();
     const tiempoArchivo = file.lastModified;
-    const desfase = (ahora - tiempoArchivo) / 1000; // Segundos
+    const desfase = (ahora - tiempoArchivo) / 1000;
 
-    if (desfase > 120) { // Máximo 2 minutos de antigüedad
-        alert("⚠️ ERROR: La foto no es reciente. Debes capturarla en vivo desde la app.");
+    // Si la foto tiene más de 120 segundos, se rechaza
+    if (desfase > 120) {
+        alert("❌ ERROR: La foto no es reciente. Debes capturarla en vivo.");
         e.target.value = "";
         selectedFile = null;
-        statusTxt.innerText = "Error: Intento de subir foto vieja.";
     } else {
         selectedFile = file;
         statusTxt.innerText = "Foto capturada y validada temporalmente.";
     }
 });
 
-// --- 3. OPTIMIZACIÓN (1600x1200 @ 70%) ---
+// --- 5. OPTIMIZACIÓN Y COMPRESIÓN (1600x1200 @ 70%) ---
 async function optimizarImagen(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -68,44 +90,40 @@ async function optimizarImagen(file) {
     });
 }
 
-// --- 4. HASH Y SUBIDA FINAL ---
+// --- 6. SUBIDA FINAL CON TRIPLE TIEMPO ---
 window.subirEvidencia = async function() {
-    if(!selectedFile) return alert("Captura una foto primero.");
-    
-    statusTxt.innerText = "Verificando autenticidad...";
+    if(!selectedFile) return alert("Primero captura una foto.");
+    if(!coordsActuales) return alert("Esperando señal de GPS...");
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        // Leemos metadatos EXIF
-        EXIF.getData(selectedFile, async function() {
-            const fechaExif = EXIF.getTag(this, "DateTimeOriginal") || "Captura Directa";
-            
-            try {
-                const fotoBase64 = await optimizarImagen(selectedFile);
-                const buffer = await selectedFile.arrayBuffer();
-                const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-                const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-                
-                const folio = "VP-" + Date.now();
+    statusTxt.innerText = "Certificando evidencia...";
 
-                await addDoc(collection(db, "evidencias"), {
-                    folio: folio,
-                    hash: hash,
-                    lat: pos.coords.latitude,
-                    lon: pos.coords.longitude,
-                    precision: pos.coords.accuracy,
-                    foto: fotoBase64,
-                    fecha_exif: fechaExif,
-                    fecha_dispositivo: new Date().toISOString(),
-                    fecha_servidor: serverTimestamp(),
-                    seguridad: "Máxima (Bloqueo de PC + Cámara Viva)"
-                });
+    try {
+        const fotoBase64 = await optimizarImagen(selectedFile);
+        
+        // Generar Hash SHA-256 para integridad del archivo
+        const buffer = await selectedFile.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+        const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+        
+        const folio = "VP-" + Date.now();
 
-                statusTxt.innerText = "✅ Certificado guardado: " + folio;
-                alert("Éxito: Datos verificados y subidos.");
-            } catch (error) {
-                console.error(error);
-                alert("Error al conectar con el servidor.");
-            }
+        // Subida a Firestore
+        await addDoc(collection(db, "evidencias"), {
+            folio: folio,
+            hash: hash,
+            lat: coordsActuales.latitude,
+            lon: coordsActuales.longitude,
+            precision: coordsActuales.accuracy,
+            foto: fotoBase64,
+            fecha_celular: new Date().toISOString(),
+            fecha_servidor: serverTimestamp(), // EL SELLO DE VERDAD
+            verificado: true
         });
-    }, () => alert("Activa el GPS para certificar."), { enableHighAccuracy: true });
+
+        statusTxt.innerText = "✅ ¡Éxito! Folio: " + folio;
+        alert("Evidencia guardada correctamente con sello de tiempo.");
+    } catch (error) {
+        console.error(error);
+        alert("Error al subir. Revisa tu conexión.");
+    }
 };
