@@ -1,9 +1,61 @@
-body{
-font-family: Arial;
-text-align: center;
-margin-top: 50px;
+/* 1. Fondo y fuente general */
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f4f9; /* Un gris muy claro de fondo */
+    color: #333;
 }
-button{
-padding: 10px;
-font-size: 16px;
+
+/* 2. Estilo del título */
+h1 {
+    color: #000;
+    font-size: 2.5rem;
+    margin-bottom: 5px;
+}
+
+p {
+    color: #666;
+    margin-bottom: 30px;
+}
+
+/* 3. Estilo para el botón de cámara y de subida */
+input[type="file"], button {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin: 15px auto;
+    padding: 15px;
+    border-radius: 8px;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* Botón de captura (el input) */
+#cameraInput {
+    background-color: #fff;
+    border: 2px dashed #ccc;
+}
+
+/* Botón de "Subir evidencia" (Estilo Negro como tu presentación) */
+#uploadBtn {
+    background-color: #000;
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+#uploadBtn:hover {
+    background-color: #333;
+    transform: translateY(-2px);
+}
+
+/* 4. Mensaje de estado */
+#status {
+    margin-top: 20px;
+    font-weight: bold;
+    color: #007bff; /* Azul para resaltar el estado */
 }
