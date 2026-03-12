@@ -16,11 +16,16 @@
     <h1>Certificador VeriPhoto</h1>
     
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
-    <button class="btn" onclick="activarGPS(); document.getElementById('cameraInput').click()">📸 CAPTURAR EVIDENCIA</button>
     
+    <button id="btnCapturar" class="btn" onclick="activarGPS(); document.getElementById('cameraInput').click()">
+        📸 CAPTURAR EVIDENCIA
+    </button>
     
     <div id="status">Esperando captura...</div>
-    <button class="btn" onclick="subirEvidencia()" style="background: #28a745; margin-top: 20px;">CERTIFICAR Y SUBIR</button>
+    
+    <button id="btnSubir" class="btn" onclick="subirEvidencia()" style="background: #28a745; margin-top: 20px;">
+        CERTIFICAR Y SUBIR
+    </button>
 
     <script type="module" src="app.js"></script>
 </body>
