@@ -1,0 +1,39 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f7f6;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+h1 { color: #333; font-size: 2.2rem; margin-bottom: 20px; }
+
+#status { margin: 15px 0; font-weight: bold; color: #666; font-size: 1.1rem; }
+
+.btn {
+    border: none;
+    border-radius: 12px;
+    padding: 18px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+#btnCapturar { background-color: #007bff; color: white; }
+
+#btnSubir { 
+    background-color: #28a745; 
+    color: white; 
+    display: none; /* Se activa por JS al tomar la foto */
+}
+
+@media (max-width: 600px) {
+    h1 { font-size: 1.8rem; }
+    .btn { font-size: 1.1rem; }
+}
