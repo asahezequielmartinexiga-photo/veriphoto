@@ -93,21 +93,30 @@ async function optimizarImagen(file) {
     });
 }
 
-// Subida (Ligada a window para el botón)
+// --- 6. SUBIDA FINAL CON TRIPLE TIEMPO ---
 window.subirEvidencia = async function() {
     if(!selectedFile) return alert("Primero captura una foto.");
     if(!coordsActuales) return alert("Esperando señal de GPS...");
 
-    statusTxt.innerText = "Certificando...";
+    // Cambiamos el texto para que el usuario sepa que está trabajando
+    statusTxt.innerText = "⏳ Certificando y subiendo...";
+    statusTxt.style.color = "orange";
+    
+    // Ocultamos el botón para evitar que le piquen dos veces por error
+    document.getElementById("btnSubir").style.display = "none";
 
     try {
         const fotoBase64 = await optimizarImagen(selectedFile);
+        
+        // Generar Hash SHA-256
         const buffer = await selectedFile.arrayBuffer();
         const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
         const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
         
+        // Generamos el folio ANTES de subirlo para tenerlo listo
         const folio = "VP-" + Date.now();
 
+        // Subida a Firestore
         await addDoc(collection(db, "evidencias"), {
             folio: folio,
             hash: hash,
@@ -120,10 +129,29 @@ window.subirEvidencia = async function() {
             verificado: true
         });
 
-        statusTxt.innerText = "✅ Folio: " + folio;
-        alert("Evidencia guardada correctamente.");
+        // --- AQUÍ ESTÁ EL CAMBIO PARA QUE SE VEA EL FOLIO ---
+        // 1. Ponemos el texto de éxito
+        statusTxt.innerHTML = `
+            <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; border: 1px solid #c3e6cb; margin-top: 10px;">
+                <strong style="font-size: 1.2rem;">✅ ¡Subida Exitosa!</strong><br>
+                <span style="font-size: 1rem;">Folio generado:</span><br>
+                <code style="font-size: 1.1rem; background: white; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 5px;">${folio}</code>
+            </div>
+        `;
+        
+        // 2. Alert para asegurar que el usuario lo vea
+        alert("✅ Evidencia certificada con éxito.\n\nFolio: " + folio);
+
+        // 3. Limpiamos las variables para la siguiente foto
+        selectedFile = null;
+        document.getElementById("cameraInput").value = "";
+
     } catch (error) {
         console.error(error);
-        alert("Error al subir.");
+        statusTxt.innerText = "❌ Error al subir. Intenta de nuevo.";
+        statusTxt.style.color = "red";
+        // Si hay error, volvemos a mostrar el botón para que intente de nuevo
+        document.getElementById("btnSubir").style.display = "block";
+        alert("Error al conectar con la base de datos.");
     }
 };
