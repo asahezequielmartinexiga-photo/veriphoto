@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador VeriPhoto</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; text-align: center; padding: 20px; }
+        .search-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; margin-bottom: 20px; width: 100%; max-width: 400px; }
+        input { width: 80%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        #resultado { display: none; margin-top: 20px; }
+        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-width: 500px; margin: 0 auto; text-align: left; }
+        .card-header { background: #28a745; color: white; padding: 15px; text-align: center; font-weight: bold; }
+        .card-body { padding: 20px; }
+        .card-body p { margin: 8px 0; font-size: 0.9em; color: #333; }
+        .foto-evidencia { width: 100%; height: auto; display: block; background: #eee; }
+        .badge { background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        .map-link { display: inline-block; margin-top: 10px; color: #007bff; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="search-box">
+        <h2>🔍 Consultar Folio</h2>
+        <input type="text" id="folioInput" placeholder="Ej: VP-1773274434281">
+        <button id="btnBuscar">VERIFICAR</button>
+    </div>
+
+    <div id="resultado">
+        <div class="card">
+            <div class="card-header">🛡️ EVIDENCIA CERTIFICADA</div>
+            <img id="displayFoto" class="foto-evidencia" src="" alt="Evidencia">
+            <div class="card-body">
+                <p><strong>Folio:</strong> <span id="displayFolio"></span></p>
+                <p><strong>Sello Servidor:</strong> <span id="displayFecha" class="badge"></span></p>
+                <p><strong>Ubicación:</strong> <span id="displayCoord"></span></p>
+                <p><strong>Hash SHA-256:</strong> <small id="displayHash" style="word-break: break-all; color: #666;"></small></p>
+                <hr>
+                <a id="btnMapa" href="" target="_blank" class="map-link">📍 Ver en Google Maps</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+        // EL MISMO CONFIG QUE YA TIENES
+        const firebaseConfig = {
+            apiKey: "AIzaSyCDrXohcOJZcsMgqmvXakk4SJnaj7hgzDo",
+            authDomain: "veriphoto-2c95d.firebaseapp.com",
+            projectId: "veriphoto-2c95d",
+            storageBucket: "veriphoto-2c95d.firebasestorage.app",
+            messagingSenderId: "1005950289147",
+            appId: "1:1005950289147:web:a8fddbf7ab082f99335c5e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.getElementById('btnBuscar').addEventListener('click', async () => {
+            const folio = document.getElementById('folioInput').value.trim();
+            const resDiv = document.getElementById('resultado');
+
+            if (!folio) return alert("Ingresa un folio");
+
+            try {
+                // Buscamos en la colección 'evidencias' el documento que tenga ese folio
+                const q = query(collection(db, "evidencias"), where("folio", "==", folio));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    alert("No se encontró ninguna evidencia con ese folio.");
+                    resDiv.style.display = "none";
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    
+                    // Llenamos los datos en la tarjeta
+                    document.getElementById('displayFoto').src = data.foto;
+                    document.getElementById('displayFolio').innerText = data.folio;
+                    document.getElementById('displayHash').innerText = data.hash;
+                    
+                    // Formatear la fecha del servidor de Firebase
+                    const fecha = data.fecha_servidor ? data.fecha_servidor.toDate().toLocaleString() : "Sin fecha";
+                    document.getElementById('displayFecha').innerText = fecha;
+                    
+                    document.getElementById('displayCoord').innerText = `${data.lat}, ${data.lon}`;
+                    
+                    // Link a Google Maps
+                    document.getElementById('btnMapa').href = `https://www.google.com/maps?q=${data.lat},${data.lon}`;
+                    
+                    resDiv.style.display = "block";
+                });
+
+            } catch (error) {
+                console.error(error);
+                alert("Error al consultar la base de datos.");
+            }
+        });
+    </script>
+</body>
+</html>
