@@ -1,32 +1,148 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VeriPhoto Pro</title>
 
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#007bff">
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
 
-    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>VeriPhoto</title>
+
+<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+
+<style>
+
+*{
+box-sizing:border-box;
+}
+
+body{
+
+margin:0;
+font-family: Arial, sans-serif;
+background:#f2f5f7;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+
+}
+
+.container{
+
+width:100%;
+max-width:420px;
+padding:25px;
+text-align:center;
+background:white;
+border-radius:16px;
+box-shadow:0 10px 25px rgba(0,0,0,0.1);
+
+}
+
+h1{
+
+margin-top:0;
+font-size:28px;
+
+}
+
+.subtitle{
+
+color:#777;
+margin-bottom:25px;
+
+}
+
+#status{
+
+margin-top:15px;
+font-size:16px;
+font-weight:bold;
+color:#555;
+
+}
+
+.btn{
+
+width:100%;
+padding:18px;
+font-size:18px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+margin-top:15px;
+
+}
+
+.capture{
+
+background:#007bff;
+color:white;
+
+}
+
+.upload{
+
+background:#28a745;
+color:white;
+
+}
+
+.btn:active{
+
+transform:scale(0.97);
+
+}
+
+</style>
+
 </head>
-<body>
-    <h1>Certificador VeriPhoto</h1>
-    
-    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
-    
-    <button id="btnCapturar" class="btn" onclick="document.getElementById('cameraInput').click()">
-    📸 CAPTURAR EVIDENCIA
-    </button>
-    
-    
-    <div id="status">Esperando captura...</div>
-    
-    <button id="btnSubir" class="btn" onclick="subirEvidencia()" style="background: #28a745; margin-top: 20px;">
-        CERTIFICAR Y SUBIR
-    </button>
 
-    <script type="module" src="app.js"></script>
+<body>
+
+<div class="container">
+
+<h1>📸 VeriPhoto</h1>
+
+<p class="subtitle">Certificación de evidencia digital</p>
+
+<input
+type="file"
+id="cameraInput"
+accept="image/*"
+capture="environment"
+style="display:none"
+>
+
+<button
+class="btn capture"
+onclick="document.getElementById('cameraInput').click()"
+>
+
+📷 CAPTURAR EVIDENCIA
+
+</button>
+
+<div id="status">
+
+Esperando captura...
+
+</div>
+
+<button
+class="btn upload"
+onclick="subirEvidencia()"
+>
+
+✔ CERTIFICAR Y SUBIR
+
+</button>
+
+</div>
+
+<script type="module" src="app.js"></script>
+
 </body>
 </html>
