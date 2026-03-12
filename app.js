@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-// 1. CONFIGURACIÓN DE FIREBASE
+// Tu config de Firebase (se mantiene igual)
 const firebaseConfig = {
     apiKey: "AIzaSyCDrXohcOJZcsMgqmvXakk4SJnaj7hgzDo",
     authDomain: "veriphoto-2c95d.firebaseapp.com",
@@ -18,16 +18,15 @@ let selectedFile;
 let coordsActuales = null;
 const statusTxt = document.getElementById("status");
 
-// --- 2. BLOQUEO DE ESCRITORIO (Solo Celulares) ---
+// Bloqueo de escritorio
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (!isMobile) {
-    document.body.innerHTML = "<h1>🚫 ACCESO DENEGADO</h1><p>VeriPhoto solo funciona en dispositivos móviles para garantizar la integridad del GPS.</p>";
-    throw new Error("PWA bloqueada en PC");
+    document.body.innerHTML = "<h1>🚫 ACCESO DENEGADO</h1><p>Usa tu celular para esta app.</p>";
+    throw new Error("Bloqueado en PC");
 }
 
-// --- 3. ACTIVACIÓN ANTICIPADA DEL GPS ---
-// Esto hace que el celular pida permiso apenas abras la app
-function activarGPS() {
+// GPS (Ligado a window para el botón)
+window.activarGPS = function() {
     if ("geolocation" in navigator) {
         navigator.geolocation.watchPosition(
             (pos) => {
@@ -45,25 +44,29 @@ function activarGPS() {
 }
 activarGPS();
 
-// --- 4. VALIDACIÓN DE CAPTURA (CÁMARA EN VIVO) ---
+// Cámara
 document.getElementById("cameraInput").addEventListener("change", (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+
     const ahora = Date.now();
     const tiempoArchivo = file.lastModified;
     const desfase = (ahora - tiempoArchivo) / 1000;
 
-    // Si la foto tiene más de 120 segundos, se rechaza
     if (desfase > 120) {
-        alert("❌ ERROR: La foto no es reciente. Debes capturarla en vivo.");
+        alert("❌ ERROR: La foto no es reciente.");
         e.target.value = "";
         selectedFile = null;
+        document.getElementById("btnSubir").style.display = "none";
     } else {
         selectedFile = file;
-        statusTxt.innerText = "Foto capturada y validada temporalmente.";
+        statusTxt.innerText = "Foto capturada y validada 📸";
+        // HACER APARECER EL BOTÓN VERDE
+        document.getElementById("btnSubir").style.display = "block";
     }
 });
 
-// --- 5. OPTIMIZACIÓN Y COMPRESIÓN (1600x1200 @ 70%) ---
+// Optimización (Se mantiene tu código exacto)
 async function optimizarImagen(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -90,24 +93,21 @@ async function optimizarImagen(file) {
     });
 }
 
-// --- 6. SUBIDA FINAL CON TRIPLE TIEMPO ---
+// Subida (Ligada a window para el botón)
 window.subirEvidencia = async function() {
     if(!selectedFile) return alert("Primero captura una foto.");
     if(!coordsActuales) return alert("Esperando señal de GPS...");
 
-    statusTxt.innerText = "Certificando evidencia...";
+    statusTxt.innerText = "Certificando...";
 
     try {
         const fotoBase64 = await optimizarImagen(selectedFile);
-        
-        // Generar Hash SHA-256 para integridad del archivo
         const buffer = await selectedFile.arrayBuffer();
         const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
         const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
         
         const folio = "VP-" + Date.now();
 
-        // Subida a Firestore
         await addDoc(collection(db, "evidencias"), {
             folio: folio,
             hash: hash,
@@ -116,14 +116,14 @@ window.subirEvidencia = async function() {
             precision: coordsActuales.accuracy,
             foto: fotoBase64,
             fecha_celular: new Date().toISOString(),
-            fecha_servidor: serverTimestamp(), // EL SELLO DE VERDAD
+            fecha_servidor: serverTimestamp(),
             verificado: true
         });
 
-        statusTxt.innerText = "✅ ¡Éxito! Folio: " + folio;
-        alert("Evidencia guardada correctamente con sello de tiempo.");
+        statusTxt.innerText = "✅ Folio: " + folio;
+        alert("Evidencia guardada correctamente.");
     } catch (error) {
         console.error(error);
-        alert("Error al subir. Revisa tu conexión.");
+        alert("Error al subir.");
     }
 };
