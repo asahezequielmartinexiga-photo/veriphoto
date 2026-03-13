@@ -1,6 +1,33 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
+// Definición de la función de detección
+function detectarSistemaOperativo() {
+    const ua = navigator.userAgent;
+    if (/android/i.test(ua)) return "Android";
+    if (/iPad|iPhone|iPod/.test(ua)) return "iOS";
+    if (/Windows/i.test(ua)) return "Windows";
+    if (/Macintosh/i.test(ua)) return "macOS";
+    return "Otro";
+}
+
+// Bloqueo de Seguridad (EJECUTAR DE INMEDIATO)
+const sistema = detectarSistemaOperativo();
+if (sistema === "Windows" || sistema === "macOS" || sistema === "Otro") {
+    document.body.innerHTML = `
+        <div class="container text-center py-5" style="margin-top: 20vh;">
+            <i class="bi bi-pc-display-horizontal text-danger" style="font-size: 5rem;"></i>
+            <h2 class="fw-bold mt-4">Acceso Solo Móvil</h2>
+            <p class="text-muted">VeriPhoto Pro requiere sensores físicos de integridad (GPS y Acelerómetro) presentes solo en dispositivos móviles.</p>
+            <div class="alert alert-warning d-inline-block mt-3">
+                <strong>Sistema detectado:</strong> ${sistema}
+            </div>
+            <p class="mt-4 small text-secondary">Escanea el código QR del servicio desde tu celular para continuar.</p>
+        </div>
+    `;
+    throw new Error("Ejecución bloqueada: Se detectó un entorno de escritorio.");
+}
+
 const firebaseConfig = {
     apiKey: "AIzaSyCDrXohcOJZcsMgqmvXakk4SJnaj7hgzDo",
     authDomain: "veriphoto-2c95d.firebaseapp.com",
