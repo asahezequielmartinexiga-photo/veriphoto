@@ -1,6 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
+// --- 0. SEGURIDAD DE PROTOCOLO ---
+if (location.protocol !== "https:" && location.hostname !== "localhost") {
+    alert("❌ CONEXIÓN INSEGURA: VeriPhoto requiere HTTPS para certificar evidencias.");
+    location.replace(`https://${location.host}${location.pathname}`);
+}
+
 const firebaseConfig = {
     apiKey: "AIzaSyCDrXohcOJZcsMgqmvXakk4SJnaj7hgzDo",
     authDomain: "veriphoto-2c95d.firebaseapp.com",
@@ -21,7 +27,6 @@ let mostrandoExito = false;
 let metricaFlatness = 0;
 let metricaEnergia = 0;
 let metricaVariacionG = 0;
-let tomandoFoto = false; // Semáforo para pausar el bloqueo de visibilidad
 
 //VARIABLES DE SEGURIDAD PRO (REEMPLAZADAS)
 let verificadoPorAgite = false;
@@ -211,20 +216,10 @@ async function checarIntegridadHardware() {
     return true;
 }
 
-// Detectamos cuando el usuario abre la cámara
-document.getElementById("cameraInput").addEventListener("click", () => {
-    tomandoFoto = true; 
-});
-
 // --- 4. CAPTURA Y PROCESAMIENTO ---
 document.getElementById("cameraInput").addEventListener("change", async (e) => {
     const file = e.target.files[0];
-    if (!file) {
-        // Si no hay archivo, significa que canceló
-        e.target.value = ""; // Limpiamos el input inmediatamente
-        ejecutarBloqueoSeguridad("Captura cancelada o interrumpida");
-        return;
-    }
+    if (!file) return;
 
     // VALIDACIÓN INSTANTÁNEA
     if (!coordsActuales) {
@@ -314,7 +309,7 @@ await addDoc(collection(db, "evidencias"), {
 });
 
     // --- MANEJO DE ÉXITO Y RESET CONTROLADO ---
-    tomandoFoto = false; 
+    
     // Primero: Aseguramos que el botón sea INCLICABLE visualmente
     btnPrincipal.disabled = true; 
     btnPrincipal.innerHTML = `<i class="bi bi-shield-check"></i> GUARDADO CON ÉXITO`;
@@ -341,7 +336,6 @@ await addDoc(collection(db, "evidencias"), {
         console.log("Sistema rearmado.");
     }, 3000); // Subimos a 3 segundos para dar tiempo a la UI
 } catch (error) {
-  tomandoFoto = false;
         // Validación para iPhone
         if (error.message.includes("Sensores inactivos")) {
             alert("❌ ERROR: VeriPhoto necesita acceso a los sensores de movimiento.");
@@ -407,54 +401,3 @@ async function procesarImagen(file) {
 }
 // Hacer la función accesible desde el HTML (necesario para módulos)
 window.activarSensores = activarSensores;
-
-// --- 5. SEGURIDAD DE VISIBILIDAD E INTERFACCIÓN (ESTRICTA) ---
-
-// Detecta si el usuario cambia de pestaña o minimiza el navegador
-document.addEventListener("visibilitychange", detectarSalida);
-
-// Detecta si el usuario interactúa con otra app o el sistema (multitarea)
-window.addEventListener("blur", () => {
-    // Si no estamos en el proceso de cámara, cualquier pérdida de foco es fraude
-    if (!tomandoFoto) {
-        detectarSalida();
-    }
-});
-
-function detectarSalida() {
-    // Si la pestaña se oculta y NO tenemos el permiso de cámara activo:
-    if (document.hidden && !tomandoFoto) {
-        ejecutarBloqueoSeguridad("Pestaña oculta detectada");
-    }
-}
-
-// Nueva función centralizada para invalidar todo
-function ejecutarBloqueoSeguridad(motivo) {
-    verificadoPorAgite = false;
-    sensorActivo = false;
-    lecturasAccel = [];
-    lecturasGyro = [];
-    analizando = false;
-    tomandoFoto = false;
-
-    btnPrincipal.disabled = true;
-    btnPrincipal.innerHTML = `<i class="bi bi-shield-slash"></i> VALIDACIÓN CANCELADA`;
-    
-    statusTxt.className = "status-box bg-danger text-white";
-    statusTxt.innerHTML = `<i class="bi bi-exclamation-octagon-fill"></i> Seguridad: ${motivo}. Reiniciando...`;
-
-    // Bloqueo físico: recarga la página para limpiar memoria volátil
-    setTimeout(() => {
-        location.reload();
-    }, 2000);
-}
-// Cuando el usuario regresa a la app desde la cámara
-window.addEventListener("focus", () => {
-    if (tomandoFoto) {
-        // Aumentamos a 1500ms para dar tiempo a que el evento 'change' ocurra primero
-        setTimeout(() => {
-            console.log("Seguridad reactivada tras regreso de cámara.");
-            tomandoFoto = false; 
-        }, 1500); 
-    }
-});
