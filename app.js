@@ -249,161 +249,6 @@ statusTxt.innerText = "GPS no soportado en este navegador";
 }
 }
 
-// --- INICIALIZACIÓN (ÚLTIMO BLOQUE DEL ARCHIVO) ---
-if (esIOS) {
-    // iOS: Pasos secuenciales para permisos + esperar agite
-    let pasoActual = 1;
-    let gpsObtenido = false;
-    
-    btnPrincipal.disabled = false;
-    btnPrincipal.innerHTML = `<i class="bi bi-shield-lock"></i> PASO 1: ACTIVAR SENSORES`;
-    
-    btnPrincipal.onclick = async () => {
-        if (pasoActual === 1) {
-            // PASO 1: Sensores
-            if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                try {
-                    const permisoSensor = await DeviceMotionEvent.requestPermission();
-                    
-                    if (permisoSensor === 'granted') {
-                        iniciarEscuchaMovimiento();
-                        
-                        statusTxt.innerHTML = `<i class="bi bi-gear-wide-connected"></i> Sensores OK. Buscando ubicación...`;
-                        btnPrincipal.disabled = true;
-                        
-                        // PASO 2: GPS
-                        if ("geolocation" in navigator) {
-                            navigator.geolocation.getCurrentPosition(
-                                (pos) => {
-                                    console.log("GPS Exitoso:", pos.coords);
-                                    
-                                    coordsActuales = {
-                                        latitude: pos.coords.latitude,
-                                        longitude: pos.coords.longitude,
-                                        accuracy: pos.coords.accuracy,
-                                        timestamp: Date.now()
-                                    };
-                                    
-                                    gpsObtenido = true;
-                                    
-                                    // ACTIVAR watchPosition para GPS continuo
-                                    activarGPS();
-                                    
-                                    // IMPORTANTE: NO habilitar botón todavía
-                                    // Esperar a que pase la prueba de agite
-                                    statusTxt.innerHTML = `<i class="bi bi-phone-vibrate text-primary"></i> Agite el teléfono 1s para continuar`;
-                                    statusTxt.className = "bg-primary-subtle text-primary border border-primary-subtle";
-                                    
-                                    // Verificar periódicamente si el agite ya pasó
-                                    const verificarAgite = setInterval(() => {
-                                        if (verificadoPorAgite) {
-                                            clearInterval(verificarAgite);
-                                            pasoActual = 3;
-                                            
-                                            // AHORA SÍ habilitar el botón
-                                            btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
-                                            btnPrincipal.disabled = false;
-                                            btnPrincipal.onclick = () => document.getElementById('cameraInput').click();
-                                            
-                                            statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para capturar`;
-                                            statusTxt.className = "status-box bg-success-subtle text-success border border-success-subtle";
-                                        }
-                                    }, 100);
-                                    
-                                },
-                                (error) => {
-                                    console.error("GPS Error:", error.code, error.message);
-                                    if (error.code === error.PERMISSION_DENIED) {
-                                        alert("Permiso de ubicación denegado. Verifica Ajustes > Safari > Ubicación.");
-                                        pasoActual = 1;
-                                        btnPrincipal.innerHTML = `<i class="bi bi-exclamation-triangle"></i> REVISAR PERMISOS`;
-                                    } else {
-                                        alert("Error de ubicación. Reintentar?");
-                                        pasoActual = 2;
-                                        btnPrincipal.innerHTML = `<i class="bi bi-geo-alt-fill"></i> REINTENTAR GPS`;
-                                    }
-                                },
-                                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-                            );
-                        } else {
-                            alert("Geolocalización no soportada.");
-                            pasoActual = 1;
-                            btnPrincipal.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ERROR`;
-                        }
-                    } else {
-                        alert("Permiso de sensores denegado.");
-                        pasoActual = 1;
-                        btnPrincipal.innerHTML = `<i class="bi bi-shield-lock"></i> REINTENTAR SENSORES`;
-                    }
-                } catch (e) {
-                    console.error(e);
-                    alert("Error en sensores.");
-                    pasoActual = 1;
-                    btnPrincipal.innerHTML = `<i class="bi bi-shield-lock"></i> REINTENTAR SENSORES`;
-                }
-            } else {
-                // Fallback iOS antiguo
-                iniciarEscuchaMovimiento();
-                activarGPS();
-                
-                // Verificar periódicamente si el agite ya pasó
-                const verificarAgite = setInterval(() => {
-                    if (verificadoPorAgite && coordsActuales) {
-                        clearInterval(verificarAgite);
-                        pasoActual = 3;
-                        btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
-                        btnPrincipal.disabled = false;
-                        btnPrincipal.onclick = () => document.getElementById('cameraInput').click();
-                        statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para capturar`;
-                        statusTxt.className = "status-box bg-success-subtle text-success border border-success-subtle";
-                    }
-                }, 100);
-            }
-        } else if (pasoActual === 2) {
-            // REINTENTO GPS
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    coordsActuales = {
-                        latitude: pos.coords.latitude,
-                        longitude: pos.coords.longitude,
-                        accuracy: pos.coords.accuracy,
-                        timestamp: Date.now()
-                    };
-                    
-                    gpsObtenido = true;
-                    activarGPS();
-                    
-                    statusTxt.innerHTML = `<i class="bi bi-phone-vibrate text-primary"></i> Agite el teléfono 1s para continuar`;
-                    statusTxt.className = "bg-primary-subtle text-primary border border-primary-subtle";
-                    
-                    // Verificar periódicamente si el agite ya pasó
-                    const verificarAgite = setInterval(() => {
-                        if (verificadoPorAgite) {
-                            clearInterval(verificarAgite);
-                            pasoActual = 3;
-                            btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
-                            btnPrincipal.disabled = false;
-                            btnPrincipal.onclick = () => document.getElementById('cameraInput').click();
-                            statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para capturar`;
-                            statusTxt.className = "status-box bg-success-subtle text-success border border-success-subtle";
-                        }
-                    }, 100);
-                },
-                (error) => {
-                    alert("No se pudo obtener ubicación. Verifica GPS.");
-                    btnPrincipal.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ERROR`;
-                    btnPrincipal.disabled = true;
-                },
-                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-            );
-        }
-    };
-} else {
-    // ANDROID: Sin cambios (tu código original funciona)
-    activarGPS();
-    activarSensores();
-}
-
 // --- 3. VALIDACIÓN DE INTEGRIDAD ---
 async function checarIntegridadHardware() {
 // 1. Validar que pasó la prueba de agite pro
@@ -678,3 +523,159 @@ statusTxt.innerHTML = mensaje;
 }
 // Hacer la función accesible desde el HTML (necesario para módulos)
 window.activarSensores = activarSensores;
+
+// --- INICIALIZACIÓN (ÚLTIMO BLOQUE DEL ARCHIVO) ---
+if (esIOS) {
+    // iOS: Pasos secuenciales para permisos + esperar agite
+    let pasoActual = 1;
+    let gpsObtenido = false;
+    let agiteCompletado = false;
+    
+    btnPrincipal.disabled = false;
+    btnPrincipal.innerHTML = `<i class="bi bi-shield-lock"></i> PASO 1: ACTIVAR SENSORES`;
+    
+    btnPrincipal.onclick = async () => {
+        if (pasoActual === 1) {
+            // PASO 1: Sensores
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const permisoSensor = await DeviceMotionEvent.requestPermission();
+                    
+                    if (permisoSensor === 'granted') {
+                        iniciarEscuchaMovimiento();
+                        
+                        statusTxt.innerHTML = `<i class="bi bi-gear-wide-connected"></i> Sensores OK. Buscando ubicación...`;
+                        btnPrincipal.disabled = true;
+                        
+                        // PASO 2: GPS (inmediato, mismo contexto de clic)
+                        if ("geolocation" in navigator) {
+                            navigator.geolocation.getCurrentPosition(
+                                (pos) => {
+                                    console.log("GPS Exitoso:", pos.coords);
+                                    
+                                    coordsActuales = {
+                                        latitude: pos.coords.latitude,
+                                        longitude: pos.coords.longitude,
+                                        accuracy: pos.coords.accuracy,
+                                        timestamp: Date.now()
+                                    };
+                                    
+                                    gpsObtenido = true;
+                                    
+                                    // ACTIVAR watchPosition para GPS continuo
+                                    activarGPS();
+                                    
+                                    // IMPORTANTE: NO habilitar botón todavía
+                                    // Mostrar mensaje de agite
+                                    statusTxt.innerHTML = `<i class="bi bi-phone-vibrate text-primary"></i> Agite el teléfono 1s para continuar`;
+                                    statusTxt.className = "bg-primary-subtle text-primary border border-primary-subtle";
+                                    
+                                    // Verificar periódicamente si el agite ya pasó
+                                    const verificarAgite = setInterval(() => {
+                                        if (verificadoPorAgite) {
+                                            clearInterval(verificarAgite);
+                                            pasoActual = 3;
+                                            
+                                            // AHORA SÍ habilitar el botón
+                                            btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
+                                            btnPrincipal.disabled = false;
+                                            btnPrincipal.onclick = () => document.getElementById('cameraInput').click();
+                                            
+                                            statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para capturar`;
+                                            statusTxt.className = "status-box bg-success-subtle text-success border border-success-subtle";
+                                        }
+                                    }, 100);
+                                    
+                                },
+                                (error) => {
+                                    console.error("GPS Error:", error.code, error.message);
+                                    if (error.code === error.PERMISSION_DENIED) {
+                                        alert("Permiso de ubicación denegado. Verifica Ajustes > Safari > Ubicación.");
+                                        pasoActual = 1;
+                                        btnPrincipal.innerHTML = `<i class="bi bi-exclamation-triangle"></i> REVISAR PERMISOS`;
+                                    } else {
+                                        alert("Error de ubicación. Reintentar?");
+                                        pasoActual = 2;
+                                        btnPrincipal.innerHTML = `<i class="bi bi-geo-alt-fill"></i> REINTENTAR GPS`;
+                                    }
+                                },
+                                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+                            );
+                        } else {
+                            alert("Geolocalización no soportada.");
+                            pasoActual = 1;
+                            btnPrincipal.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ERROR`;
+                        }
+                    } else {
+                        alert("Permiso de sensores denegado.");
+                        pasoActual = 1;
+                        btnPrincipal.innerHTML = `<i class="bi bi-shield-lock"></i> REINTENTAR SENSORES`;
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Error en sensores.");
+                    pasoActual = 1;
+                    btnPrincipal.innerHTML = `<i class="bi bi-shield-lock"></i> REINTENTAR SENSORES`;
+                }
+            } else {
+                // Fallback iOS antiguo (sin requestPermission)
+                iniciarEscuchaMovimiento();
+                activarGPS();
+                
+                // Verificar periódicamente si el agite ya pasó
+                const verificarAgite = setInterval(() => {
+                    if (verificadoPorAgite && coordsActuales) {
+                        clearInterval(verificarAgite);
+                        pasoActual = 3;
+                        btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
+                        btnPrincipal.disabled = false;
+                        btnPrincipal.onclick = () => document.getElementById('cameraInput').click();
+                        statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para capturar`;
+                        statusTxt.className = "status-box bg-success-subtle text-success border border-success-subtle";
+                    }
+                }, 100);
+            }
+        } else if (pasoActual === 2) {
+            // REINTENTO GPS
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    coordsActuales = {
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy,
+                        timestamp: Date.now()
+                    };
+                    
+                    gpsObtenido = true;
+                    activarGPS();
+                    
+                    statusTxt.innerHTML = `<i class="bi bi-phone-vibrate text-primary"></i> Agite el teléfono 1s para continuar`;
+                    statusTxt.className = "bg-primary-subtle text-primary border border-primary-subtle";
+                    
+                    // Verificar periódicamente si el agite ya pasó
+                    const verificarAgite = setInterval(() => {
+                        if (verificadoPorAgite) {
+                            clearInterval(verificarAgite);
+                            pasoActual = 3;
+                            btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
+                            btnPrincipal.disabled = false;
+                            btnPrincipal.onclick = () => document.getElementById('cameraInput').click();
+                            statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para capturar`;
+                            statusTxt.className = "status-box bg-success-subtle text-success border border-success-subtle";
+                        }
+                    }, 100);
+                },
+                (error) => {
+                    alert("No se pudo obtener ubicación. Verifica GPS.");
+                    btnPrincipal.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ERROR`;
+                    btnPrincipal.disabled = true;
+                },
+                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+            );
+        }
+    };
+} else {
+    // ANDROID: Sin cambios (tu código original funciona)
+    activarGPS();
+    activarSensores();
+}
