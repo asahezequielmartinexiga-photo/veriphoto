@@ -564,15 +564,12 @@ if (esIOS) {
                 } catch (e) { alert("Error en sensores"); }
             }
         } 
-        // --- PASO 2: UBICACIÓN (Optimizado para iPhone 15) ---
+// --- PASO 2: UBICACIÓN (Versión Final Corregida) ---
 else if (pasoPermisos === 2) {
-    // 1. NO deshabilitamos el botón todavía para no romper el vínculo de confianza
     btnPrincipal.innerHTML = `<span class="spinner-border spinner-border-sm"></span> SOLICITANDO...`;
 
-    // 2. Usamos getCurrentPosition PRIMERO (es el que despierta el diálogo en iOS nuevos)
     navigator.geolocation.getCurrentPosition(
         (pos) => {
-            // Éxito: El usuario aceptó. Ahora sí activamos el rastreo constante
             coordsActuales = {
                 latitude: pos.coords.latitude,
                 longitude: pos.coords.longitude,
@@ -581,16 +578,43 @@ else if (pasoPermisos === 2) {
             };
             
             statusTxt.innerHTML = `<i class="bi bi-geo-alt-fill text-success"></i> GPS Conectado.`;
-            activarGPS(); // Ahora watchPosition funcionará sin problemas
+            activarGPS(); 
             
-            // El botón se actualizará a "CÁMARA" automáticamente dentro de activarGPS()
+            // ← AGREGA ESTO: Verificar si el agite ya pasó
+            if (verificadoPorAgite) {
+                // Agite ya pasó antes del GPS, habilitar botón inmediatamente
+                pasoPermisos = 3;
+                btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
+                btnPrincipal.disabled = false;
+                btnPrincipal.onclick = () => document.getElementById('cameraInput').click();
+                statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para capturar`;
+            } else {
+                // Agite no ha pasado, mostrar mensaje de espera
+                statusTxt.innerHTML = `<i class="bi bi-phone-vibrate text-primary"></i> Agite el teléfono 1s para continuar`;
+                
+                // Verificar periódicamente si el agite ya pasó
+                const verificarAgite = setInterval(() => {
+                    if (verificadoPorAgite) {
+                        clearInterval(verificarAgite);
+                        pasoPermisos = 3;
+                        btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
+                        btnPrincipal.disabled = false;
+                        btnPrincipal.onclick = () => document.getElementById('cameraInput').click();
+                        statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para capturar`;
+                    }
+                }, 100);
+            }
         },
         (err) => {
-            alert("Error: Debes permitir la ubicación para certificar.");
+            console.error("Error código:", err.code, err.message);
+            alert("Safari bloqueó la solicitud. Por favor, intenta dar clic de nuevo o recarga la página.");
             btnPrincipal.innerHTML = `<i class="bi bi-geo-alt"></i> REINTENTAR PASO 2`;
-            // Dejamos el botón habilitado para que pueda reintentar
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { 
+            enableHighAccuracy: true, 
+            timeout: 15000, 
+            maximumAge: 0 
+        }
     );
 }
     };
