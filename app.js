@@ -412,9 +412,34 @@ metricaVariacionG = 0;
 // Al final del try en cameraInput:
 actualizarUI(
 "exito",
-`FOTO CERTIFICADA <br><code class="fs-5 text-white">${folio}</code>`,
+`FOTO CERTIFICADA <br><div class="d-flex align-items-center justify-content-center gap-2">
+    <code class="fs-5 text-white" id="folioDisplay">${folio}</code>
+    <button id="btnCopiarFolio" class="btn btn-outline-light btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" title="Copiar folio">
+        <i class="bi bi-copy"></i>
+    </button>
+</div>`,
 "bg-success text-white px-2 shadow-sm"
 );
+
+// CORRECCIÓN: Quitamos las comillas dobles para que use la variable real
+const btnCopiar = document.getElementById("btnCopiarFolio");
+const folioTexto = folio; // Aquí quitamos las "${ }" para que tome el valor real del folio
+
+btnCopiar.onclick = () => {
+    navigator.clipboard.writeText(folioTexto).then(() => {
+        const icono = btnCopiar.querySelector("i");
+        
+        icono.classList.replace("bi-copy", "bi-check-lg");
+        btnCopiar.classList.replace("btn-outline-light", "btn-success");
+        
+        setTimeout(() => {
+            icono.classList.replace("bi-check-lg", "bi-copy");
+            btnCopiar.classList.replace("btn-success", "btn-outline-light");
+        }, 2000);
+    }).catch(err => {
+        console.error('Error al copiar: ', err);
+    });
+};
 
 btnPrincipal.disabled = false;
 btnPrincipal.style.backgroundColor = "#0d6efd"; // El azul original de tu botón
