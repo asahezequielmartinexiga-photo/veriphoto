@@ -308,6 +308,13 @@ const response = await fetch(validationUrl, {
     })
 });
 
+if (!respuesta.ok) {
+    // ESTA ES LA CLAVE: Capturamos el JSON del error
+    const errorData = await respuesta.json();
+    // Lanzamos un error que contenga el JSON como texto
+    throw new Error(JSON.stringify(errorData));
+}
+
     const result = await response.json();
     if (!response.ok) {
         console.error("❌ Error Vercel:", result);
@@ -362,21 +369,31 @@ const response = await fetch(validationUrl, {
     btnPrincipal.onclick = () => { window.location.reload(); };
 
 } catch (error) {
-    console.error("Error detectado:", error);
+    console.error("Error:", error);
 
-    // 1. CASO: LÍMITE DE TIEMPO (Cuenta regresiva)
-    if (error.message.includes("Límite") || error.message.includes("429")) {
-        // Intentamos obtener los segundos exactos del error (si el server los manda)
-        // Si no los encuentra, por defecto usará 60
-        let segundosFaltantes = parseInt(error.message.match(/\d+/)) || 60;
-        
-        statusTxt.innerHTML = `<i class="bi bi-clock-history"></i> ${error.message}`;
+    let mensajeError = error.message;
+    let segundosFaltantes = 60; // Por defecto si algo falla
+
+    // Intentamos extraer los datos del JSON que enviamos en el throw
+    try {
+        const objetoError = JSON.parse(error.message);
+        mensajeError = objetoError.error; // "Límite alcanzado"
+        segundosFaltantes = objetoError.segundos; // El número exacto (ej. 24)
+    } catch (e) {
+        // Si no es un JSON, el mensaje se queda como estaba
+    }
+
+    if (mensajeError.includes("Límite") || mensajeError.includes("Actividad")) {
+        // AQUÍ REAPARECE EL ALERT
+        alert(`⚠️ ${mensajeError}\n\nPodrás certificar de nuevo en ${segundosFaltantes} segundos.`);
+
+        statusTxt.innerHTML = `<i class="bi bi-clock-history"></i> ${mensajeError}`;
         statusTxt.className = "status-box bg-warning text-dark";
 
-        // Función interna para la cuenta regresiva en el botón
+        // CUENTA REGRESIVA CON TIEMPO REAL
         let restante = segundosFaltantes;
         btnPrincipal.disabled = true;
-        
+
         const cuentaRegresiva = setInterval(() => {
             if (restante <= 0) {
                 clearInterval(cuentaRegresiva);
