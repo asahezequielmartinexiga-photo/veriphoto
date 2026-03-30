@@ -396,9 +396,7 @@ toast.show();
                 clearInterval(cuentaRegresiva);
                 btnPrincipal.disabled = false;
                 btnPrincipal.blur(); 
-                btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
-                statusTxt.innerHTML = `<i class="bi bi-shield-check text-success"></i> Listo para reintentar`;
-                statusTxt.className = "status-box bg-success-subtle text-success";
+                btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CCAPTURAR Y CERTIFICAR`;
             } else {
                 btnPrincipal.innerHTML = `<i class="bi bi-hourglass-split"></i> ESPERA ${restante}s...`;
                 restante--;
