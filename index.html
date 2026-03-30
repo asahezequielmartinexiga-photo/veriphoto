@@ -13,10 +13,18 @@
 <style>  
     body { background-color: #f8f9fa; min-height: 100vh; display: flex; align-items: center; }  
     .card { border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }  
-    #btnPrincipal { height: 80px; font-size: 1.4rem; font-weight: bold; border-radius: 15px; }  
+    #btnPrincipal { height: 80px; font-size: 1.4rem; font-weight: bold; border-radius: 15px; } 
     .status-box { font-size: 0.9rem; border-radius: 10px; padding: 10px; margin-bottom: 20px; }  
+    #btnPrincipal.btn-primary:focus:not(:active) {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: white !important;
+    }
+    #btnPrincipal.btn-primary:active {
+        background-color: #0b5ed7 !important; 
+        border-color: #0a58ca !important;
+    }
 </style>
-
 </head>  
 <body>  <div class="container">  
     <div class="row justify-content-center">  

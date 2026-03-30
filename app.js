@@ -396,16 +396,11 @@ toast.show();
                 clearInterval(cuentaRegresiva);
                 
                 btnPrincipal.disabled = false;
-    
-    // 2. RESET VISUAL: Quitamos la clase y la ponemos de inmediato
-    // Esto obliga al navegador a redibujar el botón desde cero (sin foco)
-    btnPrincipal.classList.remove('btn-primary');
-    void btnPrincipal.offsetWidth; // Truco de "reflow" para forzar el reinicio
-    btnPrincipal.classList.add('btn-primary');
-
-    // 3. El blur por si acaso
-    btnPrincipal.blur();
-                btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAAPTURAR Y CERTIFICAR`;
+                setTimeout(() => {
+        btnPrincipal.blur();
+        window.focus(); // Esto le quita el foco al botón y se lo da a la ventana
+    }, 1000);
+                btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
             } else {
                 btnPrincipal.innerHTML = `<i class="bi bi-hourglass-split"></i> ESPERA ${restante}s...`;
                 restante--;
