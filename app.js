@@ -264,9 +264,9 @@ watchId = navigator.geolocation.watchPosition(
                     // Sigue apagado, no hacemos nada y esperamos al siguiente ciclo
                     console.log("GPS sigue desactivado...");
                 },
-                { enableHighAccuracy: true, timeout: 2000 }
+                { enableHighAccuracy: true, timeout: 1500 }
             );
-        }, 3000); // Reintenta cada 3 segundos
+        }, 2000); // Reintenta cada 2 segundos
     }
 },
 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
