@@ -10,12 +10,27 @@ function obtenerDeviceId() {
     if (!deviceId) {
         deviceId = crypto.randomUUID();
     }
-
-    // Persistir en ambos
+    
     localStorage.setItem("vp_device_id", deviceId);
     sessionStorage.setItem("vp_device_id", deviceId);
 
     return deviceId;
+}
+
+const toastLive = document.getElementById('liveToast');
+const toastMsg = document.getElementById('toastMsg');
+const toastHeader = document.getElementById('toastHeader');
+const bsToast = new bootstrap.Toast(toastLive, {
+    autohide: false
+});
+
+function mostrarNotificacion(mensaje, tipo = 'danger') {
+    bsToast.hide();
+    setTimeout(() => {
+        toastHeader.className = `toast-header bg-${tipo} text-white`;
+        toastMsg.innerHTML = mensaje;
+        bsToast.show();
+    }, 300);
 }
 
 const esIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -27,7 +42,7 @@ function verificarCompatibilidadModelo() {
     const pr = window.devicePixelRatio;
     const esModeloLimitado = isIPhone && (height === 812 || width === 812) && pr === 3;
     if (esModeloLimitado) {
-        alert("ADVERTENCIA DE COMPATIBILIDAD:\n\nEs posible que su dispositivo no sea totalmente compatible con los sistemas de verificación de VeriPhoto. Si experimenta errores, asegúrese de usar un iPhone 11 o superior.");
+      mostrarNotificacion("ADVERTENCIA DE COMPATIBILIDAD:<br><br>Es posible que su dispositivo no sea totalmente compatible con los sistemas de verificación de VeriPhoto. Si experimenta errores, asegúrese de usar un iPhone 11 o superior.", "warning");
     }
 }
 
@@ -48,6 +63,7 @@ let analizando = false;
 let estadoUI = "inicial";
 let tiempoLecturaConcluido = false;
 let gpsEsReciente = false;
+let watchId = null; 
 
 const statusTxt = document.getElementById("status");
 const btnPrincipal = document.getElementById("btnPrincipal");
@@ -66,6 +82,9 @@ iniciarEscuchaMovimiento();
 function iniciarEscuchaMovimiento() {
 window.addEventListener('devicemotion', (event) => {
 if (verificadoPorAgite || mostrandoExito) return;
+
+if (estadoUI === "gps_debil") return; 
+
 const acc = event.accelerationIncludingGravity;  
     const rot = event.rotationRate;  
     if (!acc || !rot || !coordsActuales) return;  
@@ -158,45 +177,97 @@ analizando = false;
 
 function activarGPS() {
 if ("geolocation" in navigator) {
-navigator.geolocation.watchPosition(
+watchId = navigator.geolocation.watchPosition(
 (pos) => {
-coordsActuales = {
-latitude: pos.coords.latitude,
-longitude: pos.coords.longitude,
-accuracy: pos.coords.accuracy,
-timestamp: Date.now()
-};
-if (tiempoLecturaConcluido && !gpsEsReciente) {
-gpsEsReciente = true; 
-estadoUI = "gps";
+    const precision = pos.coords.accuracy;
+    coordsActuales = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: precision,
+        timestamp: Date.now()
+    };
 
-actualizarUI(  
+    // 1. SI LA PRECISIÓN ES MALA (> 30m)
+    if (precision > 5) {
+        gpsEsReciente = false;
+        btnPrincipal.disabled = true; // Bloqueo de seguridad
+        btnPrincipal.innerHTML = `<i class="bi bi-geo-fill"></i> BUSCANDO PRECISIÓN...`;
+        
+        actualizarUI(
+            "gps_debil",
+            `<i class="bi bi-exclamation-triangle-fill text-warning"></i> Señal débil (±${Math.round(precision)}m). <br>Se requiere menos de 30m.`,
+            "bg-warning-subtle text-warning border border-warning-subtle"
+        );
+
+        if (!window.avisoGpsDebil) {
+            window.avisoGpsDebil = true;
+        }
+        return; // Detenemos aquí: No dejamos que pase a los siguientes estados
+    }
+
+    // 2. SI LA PRECISIÓN ES BUENA (< 30m)
+    window.avisoGpsDebil = false;
+    
+    if (!verificadoPorAgite) {
+        btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
+        // Mantenemos btnPrincipal.disabled = true; porque falta el agite
+    }
+
+    // Lógica para Android y para el Paso Final de iPhone
+    if (tiempoLecturaConcluido && !gpsEsReciente) {
+        gpsEsReciente = true; 
+        estadoUI = "gps";
+
+        actualizarUI(  
             "gps",  
-            `<i class="bi bi-geo-alt-fill text-success"></i> GPS Activo (±${Math.round(pos.coords.accuracy)}m)`,  
+            `<i class="bi bi-geo-alt-fill text-success"></i> GPS Activo (±${Math.round(precision)}m)`,  
             "bg-success-subtle text-success border border-success-subtle"  
         );  
+        
         btnPrincipal.disabled = false;  
         btnPrincipal.className = "btn btn-primary w-100 shadow";  
         btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`; 
         btnPrincipal.onclick = () => document.getElementById('cameraInput').click(); 
-    } 
-    else if (estadoUI === "gps" || (estadoUI === "inicial" && coordsActuales)) {  
+    } else {
+        // Mantenemos la UI actualizada con la precisión actual aunque no esté listo el agite
         actualizarUI(  
             "gps",  
-            `<i class="bi bi-geo-alt-fill text-success"></i> GPS Activo (±${Math.round(pos.coords.accuracy)}m)`,  
+            `<i class="bi bi-geo-alt-fill text-success"></i> GPS Activo (±${Math.round(precision)}m)`,  
             "bg-success-subtle text-success border border-success-subtle"  
-        );  
-    }  
-        }, (error) => {  
-coordsActuales = null;  
-actualizarUI(  
-    "error",   
-    `<i class="bi bi-geo-off"></i> Error: Activa tu ubicación`,   
-    "bg-danger-subtle text-danger border border-danger-subtle"  
-);  
-btnPrincipal.disabled = true;  
-btnPrincipal.innerHTML = `Esperando GPS...`;  
-console.warn("Error de Geolocalización:", error.message);
+        );
+    }
+}, (error) => {  
+    coordsActuales = null;  
+    actualizarUI(  
+        "error",   
+        `<i class="bi bi-geo-off"></i> Error: Activa tu ubicación`,   
+        "bg-danger-subtle text-danger border border-danger-subtle"  
+    );  
+    btnPrincipal.disabled = true;  
+    btnPrincipal.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Esperando GPS...`;  
+    
+    console.warn("Error de Geolocalización:", error.message);
+
+    // Lógica de reintento automático (Segura para Safari y Android)
+    if (!window.reintentandoGPS) {
+        window.reintentandoGPS = true;
+        const intervaloReintento = setInterval(() => {
+            // Intentamos una lectura rápida para ver si ya activaron el GPS
+            navigator.geolocation.getCurrentPosition(
+                () => {
+                    // ¡Éxito! El GPS ya está encendido
+                    clearInterval(intervaloReintento);
+                    window.reintentandoGPS = false;
+                    activarGPS(); // Reinicia el watchPosition normal
+                },
+                () => {
+                    // Sigue apagado, no hacemos nada y esperamos al siguiente ciclo
+                    console.log("GPS sigue desactivado...");
+                },
+                { enableHighAccuracy: true, timeout: 2000 }
+            );
+        }, 3000); // Reintenta cada 3 segundos
+    }
 },
 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
 );
@@ -234,8 +305,8 @@ if (!coordsActuales) {
 
 const señalGpsReciente = (Date.now() - coordsActuales.timestamp < 10000);
 
-if (!señalGpsReciente) {  
-    alert("❌ SEÑAL GPS ANTIGUA: Espera un momento a que se actualice.");  
+if (!señalGpsReciente) {
+    mostrarNotificacion("SEÑAL GPS ANTIGUA.<br><br>Espera un momento a que se actualice.", "danger");
     e.target.value = "";  
     return;   
 }  
@@ -316,6 +387,9 @@ if (!response.ok) {
     throw new Error(JSON.stringify(result));
 }
     console.log("✅ Éxito! Folio:", result.folio);
+    
+    detenerTodoElSistema();
+    
     btnPrincipal.innerHTML = `<i class="bi bi-shield-check"></i> GUARDADO CON ÉXITO`;
     statusTxt.innerText = "Certificación completada correctamente";
     statusTxt.className = "status-box bg-success-subtle text-success border border-success-subtle";
@@ -378,16 +452,9 @@ if (!response.ok) {
     }
 
     if (mensajeError.includes("Límite") || mensajeError.includes("Actividad")) {
-const toastLive = document.getElementById('liveToast');
-const toastMsg = document.getElementById('toastMsg');
-const toast = new bootstrap.Toast(toastLive);
+      
+      mostrarNotificacion(`${mensajeError}<br><br>Reintenta en <b>${segundosFaltantes}s</b>.`, "warning");
 
-toastMsg.innerHTML = `⚠️ ${mensajeError}.<br>Reintenta en <b>${segundosFaltantes}s</b>.`;
-toast.show();
-
-        
-
-        // CUENTA REGRESIVA CON TIEMPO REAL
         let restante = segundosFaltantes;
         btnPrincipal.disabled = true;
 
@@ -409,7 +476,7 @@ toast.show();
 
     // 2. CASO: SENSORES
     } else if (error.message.includes("Sensores inactivos")) {
-        alert("❌ ERROR: VeriPhoto necesita acceso a los sensores de movimiento.");
+        mostrarNotificacion("ERROR:<br><br>Se necesita acceso a los sensores de movimiento.", "danger");
         statusTxt.innerHTML = `<i class="bi bi-shield-slash text-danger"></i> Permiso denegado`;
         statusTxt.className = "status-box bg-danger-subtle text-danger border border-danger-subtle";
         prepararReintentoRapido();
@@ -422,7 +489,7 @@ toast.show();
 
     // 4. OTROS ERRORES (Integridad, etc)
     } else {
-        alert(`❌ ERROR DE SEGURIDAD:\n${error.message}`);
+        mostrarNotificacion(`ERROR DE SEGURIDAD:<br><br>${error.message}`, "danger");
         statusTxt.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> Error de integridad`;
         statusTxt.className = "status-box bg-warning-subtle text-warning border border-warning-subtle";
         prepararReintentoRapido();
@@ -477,14 +544,50 @@ resolve(canvas.toDataURL('image/jpeg', 0.7));
 }
 
 function actualizarUI(nuevoEstado, mensaje, clase) {
-const estadosPrioritarios = ["verificado", "procesando", "exito"];
-if (estadosPrioritarios.includes(estadoUI) && !estadosPrioritarios.includes(nuevoEstado)) {  
-    return;   
-}  
-estadoUI = nuevoEstado;  
-statusTxt.className = `status-box ${clase}`;  
-statusTxt.innerHTML = mensaje;
+    // 1. Prioridad Máxima: Estados finales (No se tocan por nada)
+    const estadosFinales = ["verificado", "procesando", "exito"];
+    if (estadosFinales.includes(estadoUI) && !estadosFinales.includes(nuevoEstado)) {  
+        return;   
+    }
+
+    // 2. Prioridad de Bloqueo: Si el GPS es malo, PROHIBIMOS cualquier otro mensaje
+    // que no sea una actualización del propio GPS débil.
+    if (estadoUI === "gps_debil" && nuevoEstado !== "gps_debil") {
+        // Solo permitimos salir de aquí si el nuevo estado es "gps" (que significa precisión < 30m)
+        if (nuevoEstado !== "gps") {
+            return; 
+        }
+    }
+
+    // 3. Prioridad de Instrucción: Si el GPS ya es bueno, pero falta el agite,
+    // mantenemos el mensaje de agite y bloqueamos que el GPS lo sobrescriba.
+    if (nuevoEstado === "gps" && !verificadoPorAgite && sensorActivo) {
+        // Si ya estamos mostrando el mensaje de agite, no dejamos que el GPS lo quite
+        if (estadoUI === "agitando") {
+            return;
+        }
+    }
+
+    // 4. Aplicar el cambio si pasó todos los filtros
+    estadoUI = nuevoEstado;  
+    statusTxt.className = `status-box ${clase}`;  
+    statusTxt.innerHTML = mensaje;
 }
+
+function detenerTodoElSistema() {
+    // 1. Detenemos el GPS
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
+    // 2. Detenemos los reintentos automáticos si existen
+    if (window.reintentandoGPS) {
+        clearInterval(window.reintentandoGPS);
+        window.reintentandoGPS = false;
+    }
+    // 3. Los sensores ya tienen el 'if (mostrandoExito) return', así que están cubiertos.
+}
+
 window.activarSensores = activarSensores;
 
 if (esIOS) {
@@ -502,7 +605,7 @@ if (esIOS) {
                         btnPrincipal.innerHTML = `<i class="bi bi-geo-alt"></i> PASO 2: UBICACIÓN`;
                         statusTxt.innerHTML = `<i class="bi bi-check-circle text-success"></i> Sensores OK.`;
                     }
-                } catch (e) { alert("Error en sensores"); }
+   } catch (e) { mostrarNotificacion("Error en sensores", "danger"); }
             }
         } else if (pasoPermisos === 2) {
     btnPrincipal.innerHTML = `<span class="spinner-border spinner-border-sm"></span> SOLICITANDO...`;
@@ -538,7 +641,7 @@ if (esIOS) {
         },
         (err) => {
             console.error("Error código:", err.code, err.message);
-            alert("Safari bloqueó la solicitud. Por favor, intenta dar clic de nuevo o recarga la página.");
+            mostrarNotificacion("Safari bloqueó la solicitud. Por favor, intenta dar clic de nuevo o recarga la página.", "warning");
             btnPrincipal.innerHTML = `<i class="bi bi-geo-alt"></i> REINTENTAR PASO 2`;
         },
         { 

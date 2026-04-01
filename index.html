@@ -43,15 +43,18 @@ Inicializando sistemas de seguridad...
         </div>  
     </div>  
 </div>
-
 </div>  
 
 <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3">
   <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="toast-header bg-warning text-dark">
-      <strong class="me-auto">VeriPhoto</strong>
+    
+    <div class="toast-header bg-warning text-dark" id="toastHeader">
+      <strong class="me-auto" id="toastTitle">
+        <i class="bi bi-shield-check"></i> VeriPhoto
+      </strong>
       <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
+    
     <div class="toast-body" id="toastMsg"></div>
   </div>
 </div>
