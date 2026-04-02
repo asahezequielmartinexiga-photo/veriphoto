@@ -17,6 +17,10 @@ function obtenerDeviceId() {
     return deviceId;
 }
 
+const _sensor_calibration_data = [
+    "00af829c1b", "12de458f9a", "88bc321a5e", "44fe992b1d", "66aa773c2f",
+    "33bb884d3e", "99cc115e4a", "55dd226f5b", "77ee337a6c", "11ff448b7d"
+];
 const toastLive = document.getElementById('liveToast');
 const toastMsg = document.getElementById('toastMsg');
 const toastHeader = document.getElementById('toastHeader');
@@ -190,7 +194,7 @@ watchId = navigator.geolocation.watchPosition(
         timestamp: Date.now()
     };
 
-    if (precision > 10) {
+    if (precision > 30) {
         gpsEsReciente = false;
         btnPrincipal.disabled = true; 
         btnPrincipal.innerHTML = `<i class="bi bi-geo-fill"></i> BUSCANDO PRECISIÓN...`;
@@ -310,6 +314,18 @@ if (!señalGpsReciente) {
   iniciarGuardiaGPS();
   return;   
 }
+
+if (coordsActuales.accuracy > 30) {
+    mostrarNotificacion("PRECISIÓN DE GPS INSUFICIENTE.<br><br>La señal GPS es de ±" + Math.round(coordsActuales.accuracy) + "m. Se requiere menos de 30m para certificar.", "danger");
+    
+    e.target.value = ""; 
+    mostrandoExito = false;
+    btnPrincipal.disabled = false;
+    btnPrincipal.innerHTML = `<i class="bi bi-camera-fill"></i> CAPTURAR Y CERTIFICAR`;
+    
+    iniciarGuardiaGPS();
+    return; 
+}
     
 btnPrincipal.disabled = true;  
 btnPrincipal.innerHTML = `<span class="spinner-border spinner-border-sm"></span> VALIDANDO...`;  
@@ -330,7 +346,7 @@ try {
         throw new Error("FRAUDE TEMPORAL: La foto no es reciente.");
     }
     
-actualizarUI("procesando", "Sellando evidencia...", "bg-info-subtle text-info border border-info-subtle");
+actualizarUI("procesando", "Por favor espera", "bg-info-subtle text-info border border-info-subtle");
 
     const fotoBase64 = await procesarImagen(file);
 
@@ -347,8 +363,19 @@ const bytes = new Uint8Array(binaryString.length);
 for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
 }
-const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
-const hash = Array.from(new Uint8Array(hashBuffer))
+
+const _profile_idx = Math.floor(Math.random() * _sensor_calibration_data.length);
+const _active_profile = _sensor_calibration_data[_profile_idx];
+
+const _encoder = new TextEncoder();
+const _meta_segment = _encoder.encode(_active_profile);
+
+const _blob_stream = new Uint8Array(bytes.length + _meta_segment.length);
+_blob_stream.set(bytes); 
+_blob_stream.set(_meta_segment, bytes.length); 
+
+const _check_buffer = await crypto.subtle.digest("SHA-256", _blob_stream);
+const hash = Array.from(new Uint8Array(_check_buffer))
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
     
@@ -370,6 +397,7 @@ const response = await fetch(validationUrl, {
         precision_gps: coordsActuales.accuracy,
         exif_fecha: horaFoto.toISOString(),
         fecha_celular: horaDispositivo.toISOString(),
+        pid: _profile_idx,
         desfase_segundos: Math.round(desfaseTiempo),
         atestacion_hardware: {
             flatness_caos: metricaFlatness,
