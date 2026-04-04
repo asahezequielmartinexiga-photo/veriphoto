@@ -415,14 +415,14 @@ const result = await response.json();
 if (!response.ok) {
     throw new Error(JSON.stringify(result));
 }
-    console.log("✅ Éxito! Folio:", result.folio);
+    console.log("✅ Éxito! Folio:", result.folioHMAC);
     
     detenerTodoElSistema();
 
     actualizarUI(
         "exito",
         `FOTO CERTIFICADA <br><div class="d-flex align-items-center justify-content-center gap-2">
-            <code class="fs-5 text-white" id="folioDisplay">${result.folio}</code>
+            <code class="fs-5 text-white" id="folioDisplay">${result.folioHMAC}</code>
             <button id="btnCopiarFolio" class="btn btn-outline-light btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" title="Copiar folio">
                 <i class="bi bi-copy"></i>
             </button>
