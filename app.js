@@ -419,31 +419,39 @@ if (!response.ok) {
     
     detenerTodoElSistema();
 
-    actualizarUI(
-        "exito",
-        `FOTO CERTIFICADA <br><div class="d-flex align-items-center justify-content-center gap-2">
-            <code class="fs-5 text-white" id="folioDisplay">${result.folioHMAC}</code>
-            <button id="btnCopiarFolio" class="btn btn-outline-light btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" title="Copiar folio">
-                <i class="bi bi-copy"></i>
-            </button>
-        </div>`,
-        "bg-success text-white px-2 shadow-sm"
-    );
+    ActualizarUI(
+    "exito",
+    `FOTO CERTIFICADA <br>
+    <div class="d-flex flex-column align-items-center gap-2 mt-2">
+        <code class="fs-5 text-white" id="folioDisplay" style="word-break: break-all;">${result.folioHMAC}</code>
+        <button id="btnCopiarFolio" class="btn btn-light btn-sm w-100 d-flex align-items-center justify-content-center gap-2" 
+                style="border-radius: 10px; font-weight: 600; padding: 8px 15px; max-width: 220px;">
+            <i class="bi bi-copy"></i>
+            <span>Copiar Folio</span>
+        </button>
+    </div>`,
+    "bg-success text-white px-3 py-3 shadow-sm"
+);
 
-    const btnCopiar = document.getElementById("btnCopiarFolio");
-    if (btnCopiar) {
-        btnCopiar.onclick = () => {
-            navigator.clipboard.writeText(result.folioHMAC).then(() => {
-                const icono = btnCopiar.querySelector("i");
-                icono.classList.replace("bi-copy", "bi-check-lg");
-                btnCopiar.classList.replace("btn-outline-light", "btn-success");
-                setTimeout(() => {
-                    icono.classList.replace("bi-check-lg", "bi-copy");
-                    btnCopiar.classList.replace("btn-success", "btn-outline-light");
-                }, 2000);
-            }).catch(err => console.error('Error al copiar:', err));
-        };
-    }
+const btnCopiar = document.getElementById("btnCopiarFolio");
+if (btnCopiar) {
+    btnCopiar.onclick = () => {
+        navigator.clipboard.writeText(result.folioHMAC).then(() => {
+            const icono = btnCopiar.querySelector("i");
+            const texto = btnCopiar.querySelector("span");
+
+            icono.classList.replace("bi-copy", "bi-check-lg");
+            texto.innerText = "¡Copiado!";
+            btnCopiar.classList.replace("btn-light", "btn-warning");
+
+            setTimeout(() => {
+                icono.classList.replace("bi-check-lg", "bi-copy");
+                texto.innerText = "Copiar Folio";
+                btnCopiar.classList.replace("btn-warning", "btn-light");
+            }, 2000);
+        }).catch(err => console.error('Error al copiar:', err));
+    };
+}
 
     verificadoPorAgite = false;
     sensorActivo = false;
