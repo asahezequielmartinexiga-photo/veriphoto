@@ -419,7 +419,7 @@ if (!response.ok) {
     
     detenerTodoElSistema();
 
-    ActualizarUI(
+    actualizarUI(
     "exito",
     `FOTO CERTIFICADA <br>
     <div class="d-flex flex-column align-items-center gap-2 mt-2">
