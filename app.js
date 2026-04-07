@@ -424,8 +424,8 @@ if (!response.ok) {
     `FOTO CERTIFICADA <br>
     <div class="d-flex flex-column align-items-center gap-2 mt-2">
         <code class="fs-5 text-white" id="folioDisplay" style="word-break: break-all;">${result.folioHMAC}</code>
-        <button id="btnCopiarFolio" class="btn btn-light btn-sm w-100 d-flex align-items-center justify-content-center gap-2" 
-                style="border-radius: 10px; font-weight: 600; padding: 8px 15px; max-width: 220px;">
+        <button id="btnCopiarFolio" class="btn btn-light btn-sm d-flex align-items-center justify-content-center" 
+                style="border-radius: 8px; font-weight: 600; padding: 5px 20px; min-width: 120px;">
             <span>Copiar Folio</span>
         </button>
     </div>`,
