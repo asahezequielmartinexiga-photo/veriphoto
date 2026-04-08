@@ -380,7 +380,7 @@
             
             document.getElementById("resGPS").innerText = `${data.lat}, ${data.lon}`;
             document.getElementById("resPrecision").innerText = `± ${data.precision_gps}m`;
-            document.getElementById("btnMaps").href = `https://www.google.com/maps?q=${data.lat},${data.lon}`;
+            document.getElementById("btnMaps").href = `https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lon}`;
 
 
             document.getElementById("resFlatness").innerText = data.atestacion_hardware.flatness_caos || "N/A";
