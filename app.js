@@ -425,7 +425,7 @@ if (!response.ok) {
     <div class="d-flex flex-column align-items-center gap-2 mt-2">
         <code class="fs-5 text-white" id="folioDisplay" style="word-break: break-all;">${result.folioHMAC}</code>
         <button id="btnCopiarFolio" class="btn btn-light btn-sm d-flex align-items-center justify-content-center" 
-                style="border-radius: 8px; font-weight: 600; padding: 5px 20px; min-width: 120px;">
+                style="border-radius: 8px; font-weight: 600; padding: 5px 20px; width: 140px; height: 35px;">
             <span>Copiar Folio</span>
         </button>
     </div>`,
